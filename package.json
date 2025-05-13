@@ -1,8 +1,13 @@
 {
+  "name": "appwrite-scraper-playwright",
+  "version": "1.0.0",
   "type": "module",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "node src/main.js"
+  },
   "dependencies": {
-    "chrome-aws-lambda": "^10.1.0",
-    "puppeteer-core": "^21.0.0",
-    "node-appwrite": "^9.0.0"
+    "playwright": "^1.43.1",
+    "node-appwrite": "^10.1.0"
   }
 }
