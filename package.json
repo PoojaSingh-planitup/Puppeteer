@@ -4,7 +4,7 @@
   "type": "module",
   "main": "src/main.js",
   "dependencies": {
-    "puppeteer": "^21.3.8",
-    "node-appwrite": "^10.1.0"
+    "node-appwrite": "^16.0.0",
+    "puppeteer": "^21.11.0"
   }
 }
