@@ -1,12 +1,10 @@
 import { Client, Users } from 'node-appwrite';
 import puppeteer from 'puppeteer-core';
-import { execSync } from 'child_process';
 
 export default async ({ req, res, log, error }) => {
   log("Received request to scrape");
 
-  const browserFetcher = puppeteer.createBrowserFetcher();
-  const executablePath = '/usr/bin/chromium';
+  const executablePath = '/usr/bin/chromium'; // system-installed chromium from Dockerfile
 
   let url;
   try {
@@ -26,7 +24,7 @@ export default async ({ req, res, log, error }) => {
     const browser = await puppeteer.launch({
       executablePath,
       headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
 
     const page = await browser.newPage();
