@@ -1,22 +1,13 @@
 import { Client, Users } from 'node-appwrite';
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-core';
+import { execSync } from 'child_process';
 
 export default async ({ req, res, log, error }) => {
   log("Received request to scrape");
 
-  // Set up Appwrite client (not strictly needed for scraping, but fine to keep)
-  const client = new Client()
-    .setEndpoint(process.env.APPWRITE_FUNCTION_API_ENDPOINT)
-    .setProject(process.env.APPWRITE_FUNCTION_PROJECT_ID)
-    .setKey(req.headers['x-appwrite-key'] ?? '');
+  const browserFetcher = puppeteer.createBrowserFetcher();
+  const executablePath = '/usr/bin/chromium';
 
-  const users = new Users(client);
-
-  if (req.method !== 'POST') {
-    return res.json({ error: "Only POST supported" }, 405);
-  }
-
-  // Parse incoming JSON payload
   let url;
   try {
     const payload = req.bodyRaw || '{}';
@@ -24,17 +15,16 @@ export default async ({ req, res, log, error }) => {
     ({ url } = JSON.parse(payload));
     log("Parsed URL: " + url);
   } catch (e) {
-    log("JSON parsing failed: " + e.message);
     return res.json({ error: "Invalid JSON payload" }, 400);
   }
 
   if (!url) {
-    log("No URL provided.");
     return res.json({ error: "No URL provided" }, 400);
   }
 
   try {
     const browser = await puppeteer.launch({
+      executablePath,
       headless: 'new',
       args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
