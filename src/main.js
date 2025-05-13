@@ -24,38 +24,45 @@ export default async ({ req, res, log, error }) => {
 
     // Handle scraping logic
     if (req.method === 'POST' && req.path === "/scrape") {
+      log("Received request to /scrape");
+      log("Payload raw: " + req.payload);
+    
       let url;
       try {
         const payload = req.payload || '{}';
         ({ url } = JSON.parse(payload));
+        log("Parsed URL: " + url);
       } catch (e) {
+        log("JSON parsing failed: " + e.message);
         return res.json({ error: "Invalid JSON payload" }, 400);
       }
     
       if (!url) {
+        log("No URL provided.");
         return res.json({ error: "No URL provided" }, 400);
       }
     
-      const browser = await puppeteer.launch({
-        headless: 'new', // Optional, needed for newer Puppeteer versions
-        args: ['--no-sandbox', '--disable-setuid-sandbox'] // Required for many cloud envs
-      });
-      const page = await browser.newPage();
-      await page.goto(url);
+      try {
+        const browser = await puppeteer.launch({
+          headless: 'new',
+          args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
+        const page = await browser.newPage();
+        await page.goto(url);
     
-      const title = await page.title();
-      const images = await page.$$eval('img', imgs => imgs.map(img => img.src));
-      const text = await page.$$eval('p', ps => ps.map(p => p.innerText));
-      const listItems = await page.$$eval('li', lis => lis.map(li => li.innerText));
+        const title = await page.title();
+        const images = await page.$$eval('img', imgs => imgs.map(img => img.src));
+        const text = await page.$$eval('p', ps => ps.map(p => p.innerText));
+        const listItems = await page.$$eval('li', lis => lis.map(li => li.innerText));
     
-      await browser.close();
+        await browser.close();
     
-      return res.json({
-        title,
-        images,
-        text,
-        listItems,
-      });
+        log("Scraping complete.");
+        return res.json({ title, images, text, listItems });
+      } catch (err) {
+        log("Puppeteer error: " + err.message);
+        return res.json({ error: "Failed to scrape site." }, 500);
+      }
     }
     
 
