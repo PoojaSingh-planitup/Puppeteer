@@ -1,10 +1,9 @@
 import { Client } from 'node-appwrite';
+import chromium from 'chrome-aws-lambda';
 import puppeteer from 'puppeteer-core';
 
 export default async ({ req, res, log, error }) => {
   log("Received request to scrape");
-
-  const executablePath = '/usr/bin/chromium-browser'; // ✅ Correct path
 
   let url;
   try {
@@ -22,9 +21,9 @@ export default async ({ req, res, log, error }) => {
 
   try {
     const browser = await puppeteer.launch({
-      executablePath,
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      args: chromium.args,
+      executablePath: await chromium.executablePath,
+      headless: chromium.headless,
     });
 
     const page = await browser.newPage();

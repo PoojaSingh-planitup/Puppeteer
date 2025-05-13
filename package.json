@@ -1,6 +1,7 @@
 {
   "type": "module",
   "dependencies": {
+    "chrome-aws-lambda": "^10.1.0",
     "puppeteer-core": "^21.0.0",
     "node-appwrite": "^9.0.0"
   }
