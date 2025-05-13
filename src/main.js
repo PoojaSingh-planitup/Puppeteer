@@ -1,14 +1,14 @@
 import { Client, Users } from 'node-appwrite';
-import { chromium } from 'playwright';
+import puppeteer from 'puppeteer';
 
 export default async ({ req, res, log, error }) => {
-  log("📥 Request received: " + req.method + " " + req.path);
+  log("Received request to " + req.path);
 
-  // Appwrite client setup
   const client = new Client()
     .setEndpoint(process.env.APPWRITE_FUNCTION_API_ENDPOINT)
     .setProject(process.env.APPWRITE_FUNCTION_PROJECT_ID)
     .setKey(req.headers['x-appwrite-key'] ?? '');
+
   const users = new Users(client);
 
   try {
@@ -19,24 +19,27 @@ export default async ({ req, res, log, error }) => {
     if (req.method === 'POST' && req.path === '/scrape') {
       let url;
       try {
-        const payload = req.payload || req.bodyRaw || '{}';
-        log('📝 Payload raw: ' + payload);
+        const payload = req.payload || '{}';
+        log("Payload raw: " + payload);
         ({ url } = JSON.parse(payload));
       } catch (e) {
-        return res.json({ error: 'Invalid JSON payload' }, 400);
+        return res.json({ error: "Invalid JSON payload" }, 400);
       }
 
-      if (!url) return res.json({ error: 'No URL provided' }, 400);
+      if (!url) return res.json({ error: "No URL provided" }, 400);
+      log("Parsed URL: " + url);
 
-      log('🌐 Scraping URL: ' + url);
+      const browser = await puppeteer.launch({
+        headless: true,
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+      });
 
-      // Launch browser
-      const browser = await chromium.launch();
       const page = await browser.newPage();
       await page.goto(url, { waitUntil: 'domcontentloaded' });
 
       const title = await page.title();
-      const images = await page.$$eval('img', imgs => imgs.map(img => img.src));
+      const images = await page.$$eval('img', imgs => imgs.map(i => i.src));
       const text = await page.$$eval('p', ps => ps.map(p => p.innerText));
       const listItems = await page.$$eval('li', lis => lis.map(li => li.innerText));
 
@@ -45,9 +48,9 @@ export default async ({ req, res, log, error }) => {
       return res.json({ title, images, text, listItems });
     }
 
-    return res.json({ error: 'Invalid route' }, 404);
+    return res.json({ error: "Invalid route" }, 404);
   } catch (err) {
-    error('❌ Error: ' + err.message);
-    return res.json({ error: 'Internal Server Error' }, 500);
+    error("Puppeteer error: " + err.message);
+    return res.json({ error: "Internal Server Error" }, 500);
   }
 };

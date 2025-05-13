@@ -1,13 +1,10 @@
 {
-  "name": "appwrite-scraper-playwright",
+  "name": "puppeteer-appwrite-function",
   "version": "1.0.0",
   "type": "module",
   "main": "src/main.js",
-  "scripts": {
-    "start": "node src/main.js"
-  },
   "dependencies": {
-    "playwright": "^1.43.1",
+    "puppeteer": "^21.3.8",
     "node-appwrite": "^10.1.0"
   }
 }
