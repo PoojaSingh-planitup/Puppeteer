@@ -5,6 +5,7 @@
   "main": "src/main.js",
   "type": "module",
   "scripts": {
+    "postinstall": "npx puppeteer install",
     "format": "prettier --write ."
   },
   "dependencies": {

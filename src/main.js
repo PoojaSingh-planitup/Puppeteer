@@ -1,76 +1,57 @@
 import { Client, Users } from 'node-appwrite';
 import puppeteer from 'puppeteer';
 
-// This Appwrite function will be executed every time your function is triggered
 export default async ({ req, res, log, error }) => {
-  // Set up Appwrite Client
+  log("Received request to scrape");
+
+  // Set up Appwrite client (not strictly needed for scraping, but fine to keep)
   const client = new Client()
     .setEndpoint(process.env.APPWRITE_FUNCTION_API_ENDPOINT)
     .setProject(process.env.APPWRITE_FUNCTION_PROJECT_ID)
     .setKey(req.headers['x-appwrite-key'] ?? '');
+
   const users = new Users(client);
 
-  // Handle the request based on method and path
+  if (req.method !== 'POST') {
+    return res.json({ error: "Only POST supported" }, 405);
+  }
+
+  // Parse incoming JSON payload
+  let url;
   try {
-    if (req.method === 'GET' && req.path === "/ping") {
-      return res.text("Pong");
-    }
+    const payload = req.bodyRaw || '{}';
+    log("Payload raw: " + payload);
+    ({ url } = JSON.parse(payload));
+    log("Parsed URL: " + url);
+  } catch (e) {
+    log("JSON parsing failed: " + e.message);
+    return res.json({ error: "Invalid JSON payload" }, 400);
+  }
 
-    if (req.method === 'GET' && req.path === "/users") {
-      const response = await users.list();
-      log(`Total users: ${response.total}`);
-      return res.json(response);
-    }
+  if (!url) {
+    log("No URL provided.");
+    return res.json({ error: "No URL provided" }, 400);
+  }
 
-    // Handle scraping logic
-    if (req.method === 'POST') {
-      log("Received request to scrape");
-      log("Payload raw: " + req.bodyRaw);
-    
-      let url;
-      try {
-        const payload = req.bodyRaw || '{}';
-        ({ url } = JSON.parse(payload));
-        log("Parsed URL: " + url);
-      } catch (e) {
-        log("JSON parsing failed: " + e.message);
-        return res.json({ error: "Invalid JSON payload" }, 400);
-      }
-    
-      if (!url) {
-        log("No URL provided.");
-        return res.json({ error: "No URL provided" }, 400);
-      }
-    
-      try {
-        const browser = await puppeteer.launch({
-          headless: 'new',
-          args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
-    
-        const page = await browser.newPage();
-        await page.goto(url, { waitUntil: 'domcontentloaded' });
-    
-        const title = await page.title();
-        const images = await page.$$eval('img', imgs => imgs.map(img => img.src));
-        const text = await page.$$eval('p', ps => ps.map(p => p.innerText));
-        const listItems = await page.$$eval('li', lis => lis.map(li => li.innerText));
-    
-        await browser.close();
-    
-        log("Scraping complete.");
-        return res.json({ title, images, text, listItems });
-      } catch (err) {
-        log("Puppeteer error: " + err.message);
-        return res.json({ error: "Failed to scrape site." }, 500);
-      }
-    }
-        
+  try {
+    const browser = await puppeteer.launch({
+      headless: 'new',
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
 
-    // If no valid route is matched
-    return res.json({ error: "Invalid route" }, 404);
+    const page = await browser.newPage();
+    await page.goto(url, { waitUntil: 'domcontentloaded' });
+
+    const title = await page.title();
+    const images = await page.$$eval('img', imgs => imgs.map(img => img.src));
+    const text = await page.$$eval('p', ps => ps.map(p => p.innerText));
+    const listItems = await page.$$eval('li', lis => lis.map(li => li.innerText));
+
+    await browser.close();
+
+    return res.json({ title, images, text, listItems });
   } catch (err) {
-    error("An error occurred: " + err.message);
-    return res.json({ error: "Internal Server Error" }, 500);
+    error("Puppeteer error: " + err.message);
+    return res.json({ error: "Failed to scrape site." }, 500);
   }
 };
