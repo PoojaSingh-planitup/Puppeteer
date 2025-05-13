@@ -23,13 +23,13 @@ export default async ({ req, res, log, error }) => {
     }
 
     // Handle scraping logic
-    if (req.method === 'POST' && req.path === "/scrape") {
-      log("Received request to /scrape");
-      log("Payload raw: " + req.payload);
+    if (req.method === 'POST') {
+      log("Received request to scrape");
+      log("Payload raw: " + req.bodyRaw);
     
       let url;
       try {
-        const payload = req.payload || '{}';
+        const payload = req.bodyRaw || '{}';
         ({ url } = JSON.parse(payload));
         log("Parsed URL: " + url);
       } catch (e) {
@@ -47,8 +47,9 @@ export default async ({ req, res, log, error }) => {
           headless: 'new',
           args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
+    
         const page = await browser.newPage();
-        await page.goto(url);
+        await page.goto(url, { waitUntil: 'domcontentloaded' });
     
         const title = await page.title();
         const images = await page.$$eval('img', imgs => imgs.map(img => img.src));
@@ -64,7 +65,7 @@ export default async ({ req, res, log, error }) => {
         return res.json({ error: "Failed to scrape site." }, 500);
       }
     }
-    
+        
 
     // If no valid route is matched
     return res.json({ error: "Invalid route" }, 404);
