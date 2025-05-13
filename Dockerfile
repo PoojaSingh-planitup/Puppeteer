@@ -1,8 +1,7 @@
 FROM node:20-slim
 
-# Puppeteer environment dependencies
+# Install dependencies for Chromium
 RUN apt-get update && apt-get install -y \
-  chromium \
   fonts-liberation \
   libappindicator3-1 \
   libasound2 \
@@ -24,18 +23,13 @@ RUN apt-get update && apt-get install -y \
   --no-install-recommends && \
   rm -rf /var/lib/apt/lists/*
 
-# Create app directory
 WORKDIR /usr/src/app
 
-# Install Node dependencies
 COPY package.json ./
-RUN npm install
+RUN npm install  # Important: Puppeteer downloads Chromium here
 
-# Copy source
 COPY src ./src
 
-# Set environment variables Puppeteer needs
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
-ENV PUPPETEER_SKIP_DOWNLOAD=true
+# DO NOT set any Puppeteer-related ENV vars
 
 CMD ["node", "src/main.js"]
