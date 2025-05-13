@@ -1,4 +1,5 @@
 import { Client, Users } from 'node-appwrite';
+import puppeteer from 'puppeteer';
 
 // This Appwrite function will be executed every time your function is triggered
 export default async ({ req, res, log, error }) => {
@@ -26,10 +27,29 @@ export default async ({ req, res, log, error }) => {
     return res.text("Pong");
   }
 
+
+// Puppeteer logic to scrape data from a provided URL
+const { url } = JSON.parse(req.payload); // Expecting a JSON payload with a URL
+if (!url) {
+  return res.json({ error: "No URL provided" }, 400);
+}
+try {
+  const browser = await puppeteer.launch();
+  const page = await browser.newPage();
+  await page.goto(url); // Use the provided URL
+  const title = await page.title(); // Extract the page title
+  const images = await page.$$eval('img', imgs => imgs.map(img => img.src)); // Extract image URLs
+  const content = await page.content(); // Get the full page content
+  log(`Page content captured from ${url}.`);
+  await browser.close();
   return res.json({
-    motto: "Build like a team of hundreds_",
-    learn: "https://appwrite.io/docs",
-    connect: "https://appwrite.io/discord",
-    getInspired: "https://builtwith.appwrite.io",
+    title,
+    images,
+    content,
   });
+} catch (err) {
+  error("Puppeteer error: " + err.message);
+  return res.json({ error: "Failed to scrape the page." }, 500);
+}
 };
+
