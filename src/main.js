@@ -1,10 +1,10 @@
-import { Client, Users } from 'node-appwrite';
+import { Client } from 'node-appwrite';
 import puppeteer from 'puppeteer-core';
 
 export default async ({ req, res, log, error }) => {
   log("Received request to scrape");
 
-  const executablePath = '/usr/bin/chromium';
+  const executablePath = '/usr/bin/chromium-browser'; // ✅ Correct path
 
   let url;
   try {

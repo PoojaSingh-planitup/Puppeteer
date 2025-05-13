@@ -1,8 +1,8 @@
 FROM node:20-slim
 
-# Install Chromium and required libs
+# Install Chromium and dependencies
 RUN apt-get update && apt-get install -y \
-    chromium \
+    chromium-browser \
     fonts-liberation \
     libasound2 \
     libatk-bridge2.0-0 \
@@ -23,15 +23,11 @@ RUN apt-get update && apt-get install -y \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Set working directory
 WORKDIR /usr/src/app
 
-# Install dependencies
 COPY package.json .
 RUN npm install
 
-# Copy source
 COPY src ./src
 
-# Launch function
 CMD ["node", "src/main.js"]
