@@ -24,25 +24,40 @@ export default async ({ req, res, log, error }) => {
 
     // Handle scraping logic
     if (req.method === 'POST' && req.path === "/scrape") {
-      const { url } = JSON.parse(req.payload); // Expecting a JSON payload with a URL
+      let url;
+      try {
+        const payload = req.payload || '{}';
+        ({ url } = JSON.parse(payload));
+      } catch (e) {
+        return res.json({ error: "Invalid JSON payload" }, 400);
+      }
+    
       if (!url) {
         return res.json({ error: "No URL provided" }, 400);
       }
-      const browser = await puppeteer.launch();
+    
+      const browser = await puppeteer.launch({
+        headless: 'new', // Optional, needed for newer Puppeteer versions
+        args: ['--no-sandbox', '--disable-setuid-sandbox'] // Required for many cloud envs
+      });
       const page = await browser.newPage();
       await page.goto(url);
+    
       const title = await page.title();
       const images = await page.$$eval('img', imgs => imgs.map(img => img.src));
-      const content = await page.content();
+      const text = await page.$$eval('p', ps => ps.map(p => p.innerText));
+      const listItems = await page.$$eval('li', lis => lis.map(li => li.innerText));
+    
       await browser.close();
-
-      log(`Page content captured from ${url}.`);
+    
       return res.json({
         title,
         images,
-        content,
+        text,
+        listItems,
       });
     }
+    
 
     // If no valid route is matched
     return res.json({ error: "Invalid route" }, 404);
