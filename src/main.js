@@ -1,36 +1,25 @@
-import { Client, Users } from 'node-appwrite';
 import puppeteer from 'puppeteer';
 
 export default async ({ req, res, log, error }) => {
-  log("Received request to " + req.path);
-
-  const client = new Client()
-    .setEndpoint(process.env.APPWRITE_FUNCTION_API_ENDPOINT)
-    .setProject(process.env.APPWRITE_FUNCTION_PROJECT_ID)
-    .setKey(req.headers['x-appwrite-key'] ?? '');
-
-  const users = new Users(client);
-
   try {
-    if (req.method === 'GET' && req.path === '/ping') {
-      return res.text('pong');
+    log("=== Universal Scraper Function ===");
+    log("Method: " + req.method);
+    log("Payload: " + req.payload);
+
+    // Try to extract URL from any payload
+    let url = null;
+    try {
+      const payload = JSON.parse(req.payload || '{}');
+      url = payload.url;
+    } catch (parseErr) {
+      error("Payload parse error: " + parseErr.message);
     }
 
-    if (req.method === 'POST' && req.path === '/scrape') {
-      let url;
-      try {
-        const payload = req.payload || '{}';
-        log("Payload raw: " + payload);
-        ({ url } = JSON.parse(payload));
-      } catch (e) {
-        return res.json({ error: "Invalid JSON payload" }, 400);
-      }
-
-      if (!url) return res.json({ error: "No URL provided" }, 400);
-      log("Parsed URL: " + url);
+    if (url) {
+      log("Scraping URL: " + url);
 
       const browser = await puppeteer.launch({
-        headless: true,
+        headless: "new",
         args: ['--no-sandbox', '--disable-setuid-sandbox']
       });
 
@@ -42,14 +31,20 @@ export default async ({ req, res, log, error }) => {
       const text = await page.$$eval('p', ps => ps.map(p => p.innerText));
       const listItems = await page.$$eval('li', lis => lis.map(li => li.innerText));
 
+      log("Title: " + title);
+      images.forEach((src, i) => log(`Image[${i}]: ${src}`));
+      text.forEach((p, i) => log(`Paragraph[${i}]: ${p}`));
+      listItems.forEach((li, i) => log(`ListItem[${i}]: ${li}`));
+
       await browser.close();
 
       return res.json({ title, images, text, listItems });
     }
 
-    return res.json({ error: "Invalid route" }, 404);
+    log("No URL provided. Skipping scraping.");
+    return res.json({ message: "No URL provided in payload." }, 200);
   } catch (err) {
-    error("Puppeteer error: " + err.message);
-    return res.json({ error: "Internal Server Error" }, 500);
+    error("Unhandled error: " + err.message);
+    return res.json({ error: "Internal Server Error", message: err.message }, 500);
   }
 };
